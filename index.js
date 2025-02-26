@@ -51,6 +51,7 @@ async function run() {
     // user api
     app.post("/users", async (req, res) => {
       const user = req.body;
+      console.log(user);
       const query = [];
       if (user?.email) query.push({ email: user.email });
       if (user?.nid) query.push({ nid: user.nid });
@@ -108,27 +109,7 @@ async function run() {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
-    app.patch("/user/:id", verifyToken, async (req, res) => {
-      const user = req.body;
-      const phone = req.params.id;
-      const filter = { phone: phone };
-      const exist = await userCollection.findOne(filter);
-      const updatedDoc = {
-        $set: {
-          name: user.name,
-          phone: user.phone,
-          email: user.email,
-          role: "agent",
-          pin: user.pin,
-          nid: user.nid,
-          amount: Number(100000),
-          status: "active",
-          verify: true,
-        },
-      };
-      const result = await userCollection.updateOne(exist, updatedDoc);
-      res.send(result);
-    });
+
     let total = 0;
     // user send money
     app.patch("/user-sendmoney/:id", verifyToken, async (req, res) => {
@@ -190,7 +171,7 @@ async function run() {
           pin: user.pin,
           nid: user.nid,
           amount: userCurrentAmount,
-          status: active,
+          status: user.status,
           verify: user.verify,
           tranjectionId: tran_Id,
         },
@@ -378,6 +359,50 @@ async function run() {
     app.get("/userquery", async (req, res) => {
       const phone = req.query;
       const result = await userCollection.findOne(phone);
+      res.send(result);
+    });
+    // admin approve agent
+    app.patch("/user/:id", verifyToken, async (req, res) => {
+      const user = req.body;
+      const phone = req.params.id;
+      const filter = { phone: phone };
+      const exist = await userCollection.findOne(filter);
+      const updatedDoc = {
+        $set: {
+          name: user.name,
+          phone: user.phone,
+          email: user.email,
+          role: "agent",
+          pin: user.pin,
+          nid: user.nid,
+          amount: Number(100000),
+          status: "active",
+          verify: true,
+        },
+      };
+      const result = await userCollection.updateOne(exist, updatedDoc);
+      res.send(result);
+    });
+    // user block and active status
+    app.patch("/user-status/:id", verifyToken, async (req, res) => {
+      const user = req.body;
+      const phone = req.params.id;
+      const filter = { phone: phone };
+      const exist = await userCollection.findOne(filter);
+      const updatedDoc = {
+        $set: {
+          name: user?.data?.name,
+          phone: user?.data?.phone,
+          email: user?.data?.email,
+          role: user?.data?.role,
+          pin: user?.data?.pin,
+          nid: user?.data?.nid,
+          amount: user?.data?.amount,
+          status: user?.status == false ? "active" : "block",
+          verify: user?.data.verify,
+        },
+      };
+      const result = await userCollection.updateOne(exist, updatedDoc);
       res.send(result);
     });
   } finally {
