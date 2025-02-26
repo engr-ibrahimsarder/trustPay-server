@@ -21,7 +21,7 @@ async function run() {
   try {
     await client.connect();
     const userCollection = client.db("trustpaydb").collection("users");
-    const agentTranjectionCollection = client
+    const tranjectionCollection = client
       .db("trustpaydb")
       .collection("agentTranjection");
     // tranjectionId create
@@ -127,7 +127,176 @@ async function run() {
       const result = await userCollection.updateOne(exist, updatedDoc);
       res.send(result);
     });
-    // agent api
+    let total = 0;
+    // user send money
+    app.patch("/user-sendmoney/:id", verifyToken, async (req, res) => {
+      const sendMoney = req.body;
+      // below user every trajection admin fee
+      const role = "admin";
+      const admin = await userCollection.findOne({ role });
+      if (sendMoney.amount >= 100) {
+        total = total + 5; // Increase Admin Fee
+        const updatedDocAdmin = {
+          $set: {
+            name: admin.name,
+            phone: admin.phone,
+            email: admin.email,
+            role: admin.role,
+            pin: admin.pin,
+            nid: admin.nid,
+            amount: total,
+            status: admin.status,
+            tranjectionId: tran_Id,
+          },
+        };
+        await userCollection.updateOne(admin, updatedDocAdmin);
+      }
+      // below user another user send money
+      const userPhone = req.params.id;
+      const phone = { phone: userPhone };
+      const email = { email: sendMoney.email };
+      const currentUser = await userCollection.findOne(email);
+      const user = await userCollection.findOne(phone);
+
+      if (!user) {
+        return res.send({ message: "User Not Found!" });
+      }
+      const currentUserRemainingAmount = currentUser.amount - sendMoney.amount;
+      console.log(currentUserRemainingAmount);
+      const userCurrentAmount = Number(user.amount) + sendMoney.amount;
+
+      const updatedDocCurrentUser = {
+        $set: {
+          name: currentUser.name,
+          phone: currentUser.phone,
+          email: currentUser.email,
+          role: currentUser.role,
+          pin: currentUser.pin,
+          nid: currentUser.nid,
+          amount: currentUserRemainingAmount,
+          status: currentUser.status,
+          tranjectionId: tran_Id,
+        },
+      };
+      const updatedDocUser = {
+        $set: {
+          name: user.name,
+          phone: user.phone,
+          email: user.email,
+          role: user.role,
+          pin: user.pin,
+          nid: user.nid,
+          amount: userCurrentAmount,
+          status: true,
+          tranjectionId: tran_Id,
+        },
+      };
+      const userSendMonyTranjection = {
+        name: currentUser.name,
+        phone: currentUser.phone,
+        email: currentUser.email,
+        role: currentUser.role,
+        pin: currentUser.pin,
+        nid: currentUser.nid,
+        amount: sendMoney.amount,
+        status: currentUser.status,
+        tranjectionId: tran_Id,
+      };
+      await tranjectionCollection.insertOne(userSendMonyTranjection);
+      const currentUserUpdate = await userCollection.updateOne(
+        currentUser,
+        updatedDocCurrentUser
+      );
+      const updateUser = await userCollection.updateOne(user, updatedDocUser);
+
+      res.send(currentUserUpdate);
+    });
+
+    // user cashout
+    app.patch("/user-cashout/:id", async (req, res) => {
+      const cashOutUser = req.body;
+      // below user every trajection admin fee 0.50%
+      const role = "admin";
+      const admin = await userCollection.findOne({ role });
+      const adminFeeUserCashOut = (0.5 / 100) * cashOutUser.amount;
+      const agentFeeUserCashOut = (1.5 / 100) * cashOutUser.amount;
+      const agentTotalFeeAmount = cashOutUser.amount + agentFeeUserCashOut;
+      const adminTotalAmount = adminFeeUserCashOut + admin.amount;
+      const updatedDocAdmin = {
+        $set: {
+          name: admin.name,
+          phone: admin.phone,
+          email: admin.email,
+          role: admin.role,
+          pin: admin.pin,
+          nid: admin.nid,
+          amount: adminTotalAmount,
+          status: admin.status,
+          tranjectionId: tran_Id,
+        },
+      };
+      await userCollection.updateOne(admin, updatedDocAdmin);
+
+      // below user cashout from agent account
+      const agentPhone = req.params.id;
+      const email = { email: cashOutUser.email };
+      const currentUser = await userCollection.findOne(email);
+      const phone = { phone: agentPhone };
+      const agentUser = await userCollection.findOne(phone);
+      if (!agentUser) {
+        return res.send({ message: "User Not Found!" });
+      }
+      const agentTotalAmount = agentTotalFeeAmount + agentUser.amount;
+      const updatedDocAgent = {
+        $set: {
+          name: agentUser.name,
+          phone: agentUser.phone,
+          email: agentUser.email,
+          role: agentUser.role,
+          pin: agentUser.pin,
+          nid: agentUser.nid,
+          amount: agentTotalAmount,
+          status: agentUser.status,
+          tranjectionId: tran_Id,
+        },
+      };
+      await userCollection.updateOne(agentUser, updatedDocAgent);
+      const currentUserAmountFee =
+        cashOutUser.amount + adminFeeUserCashOut + agentFeeUserCashOut;
+      const currentUserRemainingAmount =
+        currentUser.amount - currentUserAmountFee;
+      const updatedDocCurrentUser = {
+        $set: {
+          name: currentUser.name,
+          phone: currentUser.phone,
+          email: currentUser.email,
+          role: currentUser.role,
+          pin: currentUser.pin,
+          nid: currentUser.nid,
+          amount: currentUserRemainingAmount,
+          status: currentUser.status,
+          tranjectionId: tran_Id,
+        },
+      };
+      const currentUserTranjection = {
+        name: currentUser.name,
+        phone: currentUser.phone,
+        email: currentUser.email,
+        role: currentUser.role,
+        pin: currentUser.pin,
+        nid: currentUser.nid,
+        amount: currentUserAmountFee,
+        status: currentUser.status,
+        tranjectionId: tran_Id,
+      };
+      await tranjectionCollection.insertOne(currentUserTranjection);
+      const updateCurrentUser = await userCollection.updateOne(
+        currentUser,
+        updatedDocCurrentUser
+      );
+      res.send(updateCurrentUser);
+    });
+    // agent cashin
     app.patch("/agent-user/:id", verifyToken, async (req, res) => {
       const cashIn = req.body;
       const userPhone = req.params.id;
@@ -172,8 +341,8 @@ async function run() {
       );
       const updateUser = await userCollection.updateOne(user, updatedDocUser);
       const agentTranjection = {
-        name: user.name,
-        phone: user.phone,
+        name: agentUser.name,
+        phone: agentUser.phone,
         email: agentUser.email,
         role: agentUser.role,
         pin: agentUser.pin,
@@ -182,12 +351,12 @@ async function run() {
         status: agentUser.status,
         tranjectionId: tran_Id,
       };
-      await agentTranjectionCollection.insertOne(agentTranjection);
+      await tranjectionCollection.insertOne(agentTranjection);
       res.send(updateAgentUser);
     });
     app.get("/agent-user", verifyToken, async (req, res) => {
       const email = req.query;
-      const result = await agentTranjectionCollection.find(email).toArray();
+      const result = await tranjectionCollection.find(email).toArray();
       res.send(result);
     });
   } finally {
