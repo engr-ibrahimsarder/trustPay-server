@@ -103,7 +103,7 @@ async function run() {
       const exist = await userCollection.findOne({ $or: query });
       res.send(exist);
     });
-    app.get("/all-users", async (req, res) => {
+    app.get("/all-users", verifyToken, async (req, res) => {
       const result = await userCollection.find().toArray();
       res.send(result);
     });
@@ -213,7 +213,7 @@ async function run() {
     });
 
     // user cashout
-    app.patch("/user-cashout/:id", async (req, res) => {
+    app.patch("/user-cashout/:id", verifyToken, async (req, res) => {
       const cashOutUser = req.body;
       // below user every trajection admin fee 0.50%
       const role = "admin";
@@ -357,6 +357,16 @@ async function run() {
     app.get("/agent-user", verifyToken, async (req, res) => {
       const email = req.query;
       const result = await tranjectionCollection.find(email).toArray();
+      res.send(result);
+    });
+    // admin all tranjection
+    app.get("/adminalltranjection", async (req, res) => {
+      const result = await tranjectionCollection.find().toArray();
+      res.send(result);
+    });
+    app.get("/userquery", async (req, res) => {
+      const phone = req.query;
+      const result = await userCollection.findOne(phone);
       res.send(result);
     });
   } finally {
