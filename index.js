@@ -71,7 +71,8 @@ async function run() {
         pin: hashedPin,
         nid: user.nid,
         amount: user.role === "agent" ? "00" : "40",
-        status: false,
+        status: "active",
+        verify: false,
       };
       const result = await userCollection.insertOne(userInfo);
       res.send(result);
@@ -121,7 +122,8 @@ async function run() {
           pin: user.pin,
           nid: user.nid,
           amount: Number(100000),
-          status: true,
+          status: "active",
+          verify: true,
         },
       };
       const result = await userCollection.updateOne(exist, updatedDoc);
@@ -146,6 +148,7 @@ async function run() {
             nid: admin.nid,
             amount: total,
             status: admin.status,
+            verify: admin.verify,
             tranjectionId: tran_Id,
           },
         };
@@ -162,7 +165,6 @@ async function run() {
         return res.send({ message: "User Not Found!" });
       }
       const currentUserRemainingAmount = currentUser.amount - sendMoney.amount;
-      console.log(currentUserRemainingAmount);
       const userCurrentAmount = Number(user.amount) + sendMoney.amount;
 
       const updatedDocCurrentUser = {
@@ -175,6 +177,7 @@ async function run() {
           nid: currentUser.nid,
           amount: currentUserRemainingAmount,
           status: currentUser.status,
+          verify: currentUser.verify,
           tranjectionId: tran_Id,
         },
       };
@@ -187,7 +190,8 @@ async function run() {
           pin: user.pin,
           nid: user.nid,
           amount: userCurrentAmount,
-          status: true,
+          status: active,
+          verify: user.verify,
           tranjectionId: tran_Id,
         },
       };
@@ -200,6 +204,7 @@ async function run() {
         nid: currentUser.nid,
         amount: sendMoney.amount,
         status: currentUser.status,
+        verify: currentUser.verify,
         tranjectionId: tran_Id,
       };
       await tranjectionCollection.insertOne(userSendMonyTranjection);
@@ -207,8 +212,7 @@ async function run() {
         currentUser,
         updatedDocCurrentUser
       );
-      const updateUser = await userCollection.updateOne(user, updatedDocUser);
-
+      await userCollection.updateOne(user, updatedDocUser);
       res.send(currentUserUpdate);
     });
 
@@ -232,6 +236,7 @@ async function run() {
           nid: admin.nid,
           amount: adminTotalAmount,
           status: admin.status,
+          verify: admin.verify,
           tranjectionId: tran_Id,
         },
       };
@@ -257,6 +262,7 @@ async function run() {
           nid: agentUser.nid,
           amount: agentTotalAmount,
           status: agentUser.status,
+          verify: agentUser.verify,
           tranjectionId: tran_Id,
         },
       };
@@ -275,6 +281,7 @@ async function run() {
           nid: currentUser.nid,
           amount: currentUserRemainingAmount,
           status: currentUser.status,
+          verify: currentUser.verify,
           tranjectionId: tran_Id,
         },
       };
@@ -287,6 +294,7 @@ async function run() {
         nid: currentUser.nid,
         amount: currentUserAmountFee,
         status: currentUser.status,
+        verify: currentUser.verify,
         tranjectionId: tran_Id,
       };
       await tranjectionCollection.insertOne(currentUserTranjection);
@@ -319,6 +327,7 @@ async function run() {
           nid: agentUser.nid,
           amount: agentRemainingAmount,
           status: agentUser.status,
+          verify: agentUser.verify,
           tranjectionId: tran_Id,
         },
       };
@@ -331,7 +340,8 @@ async function run() {
           pin: user.pin,
           nid: user.nid,
           amount: userTotalCashIn,
-          status: true,
+          status: user.status,
+          verify: user.verify,
           tranjectionId: tran_Id,
         },
       };
@@ -339,7 +349,7 @@ async function run() {
         agentUser,
         updatedDocAgent
       );
-      const updateUser = await userCollection.updateOne(user, updatedDocUser);
+      await userCollection.updateOne(user, updatedDocUser);
       const agentTranjection = {
         name: agentUser.name,
         phone: agentUser.phone,
@@ -349,6 +359,7 @@ async function run() {
         nid: agentUser.nid,
         amount: userCashIn,
         status: agentUser.status,
+        verify: agentUser.verify,
         tranjectionId: tran_Id,
       };
       await tranjectionCollection.insertOne(agentTranjection);
